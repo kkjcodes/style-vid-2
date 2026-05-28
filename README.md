@@ -263,12 +263,3 @@ Rate limiting uses forwarded client IP when available (`X-Forwarded-For`, then `
 - `scripts/`: utility scripts
 - `tests/`: unit and integration tests
 
-## Portfolio / hiring notes
-
-This repository demonstrates:
-
-- End-to-end product shipping
-- Async backend orchestration
-- Security-minded implementation
-- Cloud deployment readiness
-- Testing and regression discipline
