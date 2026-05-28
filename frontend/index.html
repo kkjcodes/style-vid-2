@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StyleVid — AI Creator Videos</title>
+  <style>
+    /* ── Variables ──────────────────────────────────────────────────── */
+    :root {
+      --bg:          #0d0d14;
+      --surface:     #16161f;
+      --card:        #1e1e2e;
+      --border:      #2a2a3f;
+      --accent:      #7c6fe0;
+      --accent-h:    #6d5fd1;
+      --accent-glow: rgba(124,111,224,.18);
+      --green:       #34d399;
+      --red:         #f87171;
+      --yellow:      #fbbf24;
+      --text:        #e4e4f4;
+      --muted:       #8888a8;
+      --sidebar-w:   240px;
+      --radius:      10px;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+    a { color: var(--accent); text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+    input, textarea, select { font-family: inherit; }
+
+    /* ── Scrollbar ──────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Helpers ────────────────────────────────────────────────────── */
+    .hidden    { display: none !important; }
+    .mt-sm     { margin-top: 8px; }
+    .mt-md     { margin-top: 16px; }
+    .mt-lg     { margin-top: 24px; }
+    .text-sm   { font-size: 13px; }
+    .text-muted{ color: var(--muted); }
+    .bold      { font-weight: 600; }
+
+    /* ── Card ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      border: none; transition: all .15s; cursor: pointer;
+    }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary:hover  { background: var(--accent-h); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-ghost    { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover    { background: var(--border); }
+    .btn-danger   { background: transparent; color: var(--red); border: 1px solid rgba(248,113,113,.4); }
+    .btn-danger:hover   { background: rgba(248,113,113,.1); }
+    .btn-sm       { padding: 7px 14px; font-size: 13px; }
+    .btn-full     { width: 100%; }
+    .btn-icon     { padding: 8px; border-radius: 8px; background: var(--surface);
+                    border: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+    .btn-icon:hover { background: rgba(248,113,113,.15); color: var(--red); border-color: var(--red); }
+
+    /* ── Form ───────────────────────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 13px; font-weight: 500; color: var(--muted); }
+    .input {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); padding: 10px 14px; font-size: 14px; width: 100%;
+      transition: border-color .15s;
+    }
+    .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .input::placeholder { color: var(--muted); }
+    textarea.input { resize: vertical; min-height: 80px; }
+    select.input   { appearance: none; cursor: pointer; }
+
+    /* ── Progress ───────────────────────────────────────────────────── */
+    .progress-wrap { background: var(--surface); border-radius: 99px; height: 8px; overflow: hidden; }
+    .progress-bar  { height: 100%; border-radius: 99px; background: var(--accent); transition: width .4s; }
+
+    /* ── Badge ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
+    }
+    .badge-purple { background: rgba(124,111,224,.18); color: var(--accent); }
+    .badge-green  { background: rgba(52,211,153,.15);  color: var(--green);  }
+    .badge-red    { background: rgba(248,113,113,.15); color: var(--red);    }
+    .badge-yellow { background: rgba(251,191,36,.15);  color: var(--yellow); }
+    .badge-gray   { background: rgba(136,136,168,.12); color: var(--muted);  }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ── Alert ──────────────────────────────────────────────────────── */
+    .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; border-left: 3px solid; }
+    .alert-error  { background: rgba(248,113,113,.1); border-color: var(--red);    color: var(--red);    }
+    .alert-success{ background: rgba(52,211,153,.1);  border-color: var(--green);  color: var(--green);  }
+    .alert-info   { background: rgba(124,111,224,.1); border-color: var(--accent); color: var(--accent); }
+    .alert-warn   { background: rgba(251,191,36,.1);  border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── Tabs ───────────────────────────────────────────────────────── */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab  { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--muted);
+            border-bottom: 2px solid transparent; cursor: pointer; transition: all .15s;
+            background: none; border-top: none; border-left: none; border-right: none; }
+    .tab.active           { color: var(--text); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active){ color: var(--text); }
+
+    /* ── Spinner ────────────────────────────────────────────────────── */
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.2);
+               border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+    .spinner-lg     { width: 32px; height: 32px; border-width: 3px; }
+    .spinner-accent { border-top-color: var(--accent); border-color: var(--accent-glow); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ════════════════════════════════════════════════════════════════
+       AUTH PAGE
+    ═══════════════════════════════════════════════════════════════ */
+    #page-auth {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .auth-wrap { width: 100%; max-width: 400px; }
+    .auth-logo { text-align: center; margin-bottom: 32px; }
+    .auth-logo h1 { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+    .auth-logo h1 span { color: var(--accent); }
+    .auth-logo p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+    .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 32px; }
+    .auth-footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 16px; line-height: 1.6; }
+
+    /* ════════════════════════════════════════════════════════════════
+       APP SHELL
+    ═══════════════════════════════════════════════════════════════ */
+    #page-app { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 0; position: fixed;
+      top: 0; left: 0; bottom: 0; z-index: 100;
+    }
+    .sidebar-logo { padding: 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo h2 { font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
+    .sidebar-logo h2 span { color: var(--accent); }
+    .sidebar-nav { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+      font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all .15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover   { background: var(--card); color: var(--text); }
+    .nav-item.active  { background: var(--accent-glow); color: var(--accent); }
+    .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+    .sidebar-footer { padding: 14px; border-top: 1px solid var(--border); }
+    .user-chip {
+      display: flex; align-items: center; gap: 10px; padding: 10px;
+      background: var(--card); border-radius: 8px; font-size: 13px;
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; flex-shrink: 0; color: #fff;
+    }
+    .user-name { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer;
+                  padding: 4px 6px; border-radius: 4px; transition: color .15s; font-size: 16px; }
+    .logout-btn:hover { color: var(--red); }
+
+    /* Main */
+    .main-content { flex: 1; margin-left: var(--sidebar-w); padding: 36px; max-width: 960px; }
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header p  { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .page-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; padding: 16px 16px 80px; }
+      .mobile-nav {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+        background: var(--surface); border-top: 1px solid var(--border);
+        display: flex; justify-content: space-around; padding: 6px 0;
+      }
+      .mobile-nav-item {
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        font-size: 11px; color: var(--muted); cursor: pointer; padding: 6px 12px;
+        background: none; border: none;
+      }
+      .mobile-nav-item.active { color: var(--accent); }
+      .mobile-nav-item .nav-icon { font-size: 20px; }
+    }
+    @media (min-width: 769px) { .mobile-nav { display: none; } }
+
+    /* ════════════════════════════════════════════════════════════════
+       SETUP PAGE
+    ═══════════════════════════════════════════════════════════════ */
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 640px) { .setup-grid { grid-template-columns: 1fr; } }
+
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 10px; min-height: 160px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: border-color .15s; overflow: hidden; position: relative;
+    }
+    .upload-zone:hover { border-color: var(--accent); }
+    .upload-zone img   { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+    .upload-hint { text-align: center; color: var(--muted); padding: 20px; }
+    .upload-hint .icon { font-size: 36px; display: block; margin-bottom: 8px; }
+
+    .status-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      background: var(--surface); border-radius: 8px; font-size: 13px;
+    }
+    .url-list { display: flex; flex-direction: column; gap: 8px; }
+    .url-row  { display: flex; gap: 8px; }
+    .url-row .input { flex: 1; }
+
+    .readiness-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      background: var(--surface); border-radius: 8px; font-size: 13px;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       GENERATE PAGE
+    ═══════════════════════════════════════════════════════════════ */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+    .gen-progress-card {
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+    }
+    .gen-stage { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .gen-result { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .gen-result video { width: 100%; display: block; max-height: 480px; background: #000; }
+    .gen-result-actions { padding: 12px 16px; display: flex; gap: 8px; background: var(--card); }
+
+    .mode-pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px;
+      border-radius: 99px; font-size: 13px; font-weight: 600;
+      background: rgba(124,111,224,.12); color: var(--accent); border: 1px solid rgba(124,111,224,.3);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       HISTORY PAGE
+    ═══════════════════════════════════════════════════════════════ */
+    .history-grid { display: grid; gap: 16px; }
+    .history-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; transition: border-color .15s;
+    }
+    .history-card:hover { border-color: rgba(124,111,224,.4); }
+    .history-card-body { padding: 16px; }
+    .history-top  { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .history-prompt { font-size: 14px; font-weight: 500; flex: 1; line-height: 1.4; }
+    .history-meta   { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .history-actions {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; background: var(--surface); align-items: center;
+    }
+    .history-video { background: #000; }
+    .history-video video { width: 100%; max-height: 200px; display: block; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 48px; display: block; margin-bottom: 12px; }
+
+    /* ════════════════════════════════════════════════════════════════
+       ACCOUNT PAGE
+    ═══════════════════════════════════════════════════════════════ */
+    .account-sections { display: flex; flex-direction: column; gap: 20px; }
+    .section-label {
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px;
+    }
+    .key-chip {
+      font-family: monospace; font-size: 14px; color: var(--green);
+      background: var(--surface); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+      display: inline-block;
+    }
+    .danger-card { border-color: rgba(248,113,113,.25); }
+    .danger-card .section-label { color: var(--red); }
+
+    /* ── Toast ──────────────────────────────────────────────────────── */
+    #toasts {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 18px; font-size: 14px; max-width: 340px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: toastIn .2s ease;
+    }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes toastIn { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     AUTH PAGE
+═══════════════════════════════════════════════════════════════ -->
+<div id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <h1>Style<span>Vid</span></h1>
+      <p>Create AI videos in your own likeness.</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="tabs" style="margin-bottom:24px">
+        <button class="tab active" onclick="authTab('login')">Sign In</button>
+        <button class="tab" onclick="authTab('register')">Create Account</button>
+      </div>
+
+      <!-- Login -->
+      <div id="auth-login">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label>Username</label>
+            <input class="input" id="login-username" type="text" placeholder="your_username"
+                   autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input class="input" id="login-password" type="password" placeholder="••••••••"
+                   autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+          </div>
+          <div id="login-err" class="hidden"></div>
+          <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">
+            <span id="login-btn-text">Sign In</span>
+            <span id="login-spinner" class="spinner hidden"></span>
+          </button>
+          <p style="text-align:center;margin-top:8px">
+            <a href="#" class="text-sm" onclick="showForgot();return false">Forgot password?</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Register -->
+      <div id="auth-register" class="hidden">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label>Username</label>
+            <input class="input" id="reg-username" type="text" placeholder="choose_a_username"
+                   autocomplete="username" onkeydown="if(event.key==='Enter')doRegister()" />
+          </div>
+          <div class="form-group">
+            <label>Email <span class="text-muted text-sm">(for password reset)</span></label>
+            <input class="input" id="reg-email" type="email" placeholder="you@example.com"
+                   autocomplete="email" onkeydown="if(event.key==='Enter')doRegister()" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input class="input" id="reg-password" type="password" placeholder="At least 6 characters"
+                   autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()" />
+          </div>
+          <div id="reg-err" class="hidden"></div>
+          <button class="btn btn-primary btn-full" id="reg-btn" onclick="doRegister()">
+            <span id="reg-btn-text">Create Account</span>
+            <span id="reg-spinner" class="spinner hidden"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Forgot password -->
+      <div id="auth-forgot" class="hidden">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <p class="text-sm text-muted">Enter your email and we'll send a reset link.</p>
+          <div class="form-group">
+            <label>Email</label>
+            <input class="input" id="forgot-email" type="email" placeholder="you@example.com"
+                   onkeydown="if(event.key==='Enter')doForgot()" />
+          </div>
+          <div id="forgot-msg" class="hidden"></div>
+          <button class="btn btn-primary btn-full" id="forgot-btn" onclick="doForgot()">
+            <span id="forgot-btn-text">Send Reset Link</span>
+            <span id="forgot-spinner" class="spinner hidden"></span>
+          </button>
+          <p style="text-align:center">
+            <a href="#" class="text-sm" onclick="authTab('login');hideForgot();return false">← Back to sign in</a>
+          </p>
+        </div>
+      </div>
+
+      <!-- Reset password (shown when ?reset=TOKEN in URL) -->
+      <div id="auth-reset" class="hidden">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <p class="text-sm text-muted">Choose a new password for your account.</p>
+          <div class="form-group">
+            <label>New password</label>
+            <input class="input" id="reset-password" type="password" placeholder="At least 6 characters"
+                   autocomplete="new-password" onkeydown="if(event.key==='Enter')doReset()" />
+          </div>
+          <div id="reset-err" class="hidden"></div>
+          <button class="btn btn-primary btn-full" id="reset-btn" onclick="doReset()">
+            <span id="reset-btn-text">Set New Password</span>
+            <span id="reset-spinner" class="spinner hidden"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p class="auth-footer">
+      Personal research project · No subscription required<br>
+      Requires your own <a href="https://replicate.com" target="_blank">Replicate API key</a> for generation.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     APP SHELL
+═══════════════════════════════════════════════════════════════ -->
+<div id="page-app" class="hidden">
+
+  <!-- Sidebar (desktop) -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>Style<span>Vid</span></h2>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" id="snav-setup"    onclick="goto('setup')">
+        <span class="nav-icon">⚙️</span> Setup
+      </button>
+      <button class="nav-item" id="snav-generate" onclick="goto('generate')">
+        <span class="nav-icon">🎬</span> Generate
+      </button>
+      <button class="nav-item" id="snav-history"  onclick="goto('history')">
+        <span class="nav-icon">📁</span> History
+      </button>
+      <button class="nav-item" id="snav-account"  onclick="goto('account')">
+        <span class="nav-icon">👤</span> Account
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar" id="sb-avatar">?</div>
+        <span class="user-name" id="sb-username">…</span>
+        <button class="logout-btn" onclick="logout()" title="Sign out">↩</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav">
+    <button class="mobile-nav-item active" id="mnav-setup"    onclick="goto('setup')">
+      <span class="nav-icon">⚙️</span>Setup
+    </button>
+    <button class="mobile-nav-item" id="mnav-generate" onclick="goto('generate')">
+      <span class="nav-icon">🎬</span>Generate
+    </button>
+    <button class="mobile-nav-item" id="mnav-history"  onclick="goto('history')">
+      <span class="nav-icon">📁</span>History
+    </button>
+    <button class="mobile-nav-item" id="mnav-account"  onclick="goto('account')">
+      <span class="nav-icon">👤</span>Account
+    </button>
+  </nav>
+
+  <main class="main-content">
+
+    <!-- ══════════ SETUP ══════════ -->
+    <div id="pg-setup">
+      <div class="page-header">
+        <h1>Setup Your Identity</h1>
+        <p>Upload a selfie and optionally boost quality with videos showing your face.</p>
+      </div>
+
+      <div class="setup-grid">
+
+        <!-- Selfie -->
+        <div class="card">
+          <p class="bold" style="margin-bottom:12px">📸 Selfie</p>
+          <div class="upload-zone" id="selfie-zone" onclick="document.getElementById('selfie-input').click()">
+            <img id="selfie-preview" class="hidden" alt="selfie preview" />
+            <div class="upload-hint" id="selfie-hint">
+              <span class="icon">🖼️</span>
+              <strong>Click to upload</strong><br>
+              <span class="text-sm">JPEG, PNG, or WebP · front-facing, well-lit</span>
+              <span class="text-sm text-muted" style="display:block;margin-top:2px">HEIC not supported — convert to JPEG first</span>
+            </div>
+          </div>
+          <input type="file" id="selfie-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" class="hidden" onchange="onSelfieFile(this)" />
+          <div id="selfie-status" class="hidden mt-sm"></div>
+          <button class="btn btn-primary btn-full mt-sm" id="selfie-btn" onclick="uploadSelfie()" disabled>
+            <span id="selfie-btn-text">Upload Selfie</span>
+            <span id="selfie-spinner" class="spinner hidden"></span>
+          </button>
+        </div>
+
+        <!-- Video upload -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <p class="bold">🎥 Boost Quality</p>
+            <span class="badge badge-purple">Optional</span>
+          </div>
+          <p class="text-sm text-muted" style="margin-bottom:6px">
+            Upload 2–5 short videos of yourself for richer face identity matching.
+            Vary lighting, angles, and expressions for best results.
+          </p>
+          <p class="text-xs text-muted" style="margin-bottom:14px">
+            <strong>MP4 or MOV · Max 100 MB per file · 2–5 files, 30 sec–5 min each</strong> ·
+            Files are permanently deleted once training is submitted.
+          </p>
+
+          <input type="file" id="video-input" accept="video/mp4,video/quicktime,.mp4,.mov"
+                 multiple class="hidden" onchange="onVideoFiles(this)" />
+          <button class="btn btn-ghost btn-full" onclick="document.getElementById('video-input').click()">
+            📁 Choose Videos
+          </button>
+          <div id="video-file-list" class="hidden mt-sm" style="border:1px solid var(--border);border-radius:6px;padding:6px 10px"></div>
+          <div id="video-server-badge" class="hidden mt-sm"></div>
+
+          <div id="extract-status" class="hidden mt-sm"></div>
+          <div id="extract-progress" class="hidden mt-sm">
+            <p class="gen-stage" id="extract-stage">Processing…</p>
+            <div class="progress-wrap"><div class="progress-bar" id="extract-bar" style="width:0%"></div></div>
+          </div>
+          <div id="frames-badge-wrap" class="hidden mt-sm"></div>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" id="extract-btn" onclick="startExtract()" style="flex:1">
+              <span id="extract-btn-text">Extract Frames</span>
+              <span id="extract-spinner" class="spinner hidden"></span>
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="clearFrames()" title="Clear frames and uploaded videos">
+              🗑 Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LoRA Training -->
+      <div class="card mt-lg">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <p class="bold" style="margin:0">Train Your Likeness</p>
+          <span class="badge badge-purple">Best Quality</span>
+        </div>
+        <p class="text-sm text-muted" style="margin-bottom:14px">
+          Fine-tunes a personal video model on your face using the videos above.
+          <strong>First training: ~10–15 min</strong>, one-time per identity.
+          After that, each video generates in ~3–5 min with significantly better likeness.
+        </p>
+        <div class="alert alert-info" style="margin-bottom:10px">
+          <strong>💡 Important:</strong> This app does not charge you. Training costs are billed directly by your Replicate account.
+        </div>
+        <div class="alert alert-warn" style="margin-bottom:14px">
+          <strong>⚠️ Consent required:</strong> Only use videos of <strong>yourself</strong>. Do not upload videos featuring other people without their explicit written consent. Training on someone else's likeness without permission may violate Replicate's Terms of Service and applicable law.
+        </div>
+
+        <div id="lora-trained-banner" class="hidden" style="margin-bottom:12px">
+          <span class="badge badge-green">✓ Your likeness model is trained — new videos will use it automatically</span>
+        </div>
+
+        <div id="lora-status-area" class="hidden mt-sm">
+          <p class="gen-stage" id="lora-stage">Starting…</p>
+          <div class="progress-wrap"><div class="progress-bar" id="lora-bar" style="width:0%"></div></div>
+          <p class="text-sm text-muted" style="margin-top:6px">One-time wait — after this, videos generate in ~3–5 min with your face locked in.</p>
+        </div>
+        <div id="lora-error-area" class="hidden mt-sm"></div>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" id="lora-btn" onclick="startLoraTraining()" style="flex:1">
+            <span id="lora-btn-text">Train Likeness (~$5–10)</span>
+            <span id="lora-spinner" class="spinner hidden"></span>
+          </button>
+          <button class="btn btn-ghost btn-sm" id="lora-clear-btn" onclick="clearLora()" title="Reset training" style="display:none">
+            🗑 Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Readiness -->
+      <div class="card mt-lg">
+        <p class="bold" style="margin-bottom:14px">✅ Readiness Checklist</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="readiness-item">
+            <span id="r-selfie">⬜</span>
+            <span>Selfie uploaded</span>
+          </div>
+          <div class="readiness-item">
+            <span id="r-key">⬜</span>
+            <span>Replicate API key saved
+              <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="goto('account')">
+                Add in Account →
+              </button>
+            </span>
+          </div>
+          <div class="readiness-item">
+            <span id="r-frames">⬜</span>
+            <span>Reference frames extracted <span class="text-muted text-sm">(optional)</span></span>
+          </div>
+          <div class="readiness-item">
+            <span id="r-lora">⬜</span>
+            <span>Likeness model trained <span class="text-muted text-sm">(optional — best quality)</span></span>
+          </div>
+        </div>
+        <div id="ready-cta" class="hidden mt-md">
+          <button class="btn btn-primary" onclick="goto('generate')">🎬 Go Generate →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ GENERATE ══════════ -->
+    <div id="pg-generate" class="hidden">
+      <div class="page-header">
+        <div class="page-header-row">
+          <div>
+            <h1>Generate Video</h1>
+            <p>Describe what you want to see. You'll be the person in the video.</p>
+          </div>
+          <div id="gen-mode-pill" class="mode-pill hidden">
+            <span class="dot"></span><span id="gen-mode-txt">Selfie mode</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label>Prompt — describe the scene</label>
+            <textarea class="input" id="gen-prompt" rows="3"
+              placeholder="Walking through Central Park in autumn, camera slowly zooming out, cinematic 4K…"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Resolution</label>
+              <select class="input" id="gen-res">
+                <option value="720p">720p — faster, recommended</option>
+                <option value="1080p">1080p — slower, sharper</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Clips <span class="text-muted text-sm" id="dur-lbl">(~10s total)</span></label>
+              <select class="input" id="gen-clips" onchange="updateDurLabel()">
+                <option value="1">1 clip (~5s)</option>
+                <option value="2" selected>2 clips (~10s)</option>
+                <option value="3">3 clips (~15s)</option>
+              </select>
+            </div>
+          </div>
+          <div id="gen-err" class="hidden"></div>
+          <button class="btn btn-primary" id="gen-btn" onclick="generate()">
+            <span id="gen-btn-text">🎬 Generate Video</span>
+            <span id="gen-spinner" class="spinner hidden"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div id="gen-progress" class="gen-progress-card hidden mt-lg">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span class="bold">Generating…</span>
+          <span class="badge badge-yellow"><span class="dot"></span> Running</span>
+        </div>
+        <p class="gen-stage" id="gen-stage-txt">Starting…</p>
+        <div class="progress-wrap"><div class="progress-bar" id="gen-bar" style="width:0%"></div></div>
+        <p class="text-sm text-muted mt-sm" id="gen-eta"></p>
+      </div>
+
+      <!-- Result -->
+      <div id="gen-result" class="gen-result hidden mt-lg">
+        <video id="gen-video" controls autoplay loop></video>
+        <div class="gen-result-actions">
+          <a id="gen-dl" class="btn btn-primary btn-sm" download>⬇ Download</a>
+          <button class="btn btn-ghost btn-sm" onclick="goto('history')">📁 History</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ HISTORY ══════════ -->
+    <div id="pg-history" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+        <div class="page-header" style="margin-bottom:0">
+          <h1>Video History</h1>
+          <p>All videos you've generated.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadHistory()">↻ Refresh</button>
+      </div>
+
+      <div id="hist-loading" style="display:flex;align-items:center;justify-content:center;padding:60px">
+        <div class="spinner spinner-lg spinner-accent"></div>
+      </div>
+      <div id="hist-empty" class="empty-state hidden">
+        <span class="icon">🎬</span>
+        <p class="bold">No videos yet</p>
+        <p class="text-sm mt-sm">Head to Generate to create your first video.</p>
+        <button class="btn btn-primary btn-sm mt-md" onclick="goto('generate')">Generate Now</button>
+      </div>
+      <div id="hist-grid" class="history-grid hidden"></div>
+    </div>
+
+    <!-- ══════════ ACCOUNT ══════════ -->
+    <div id="pg-account" class="hidden">
+      <div class="page-header">
+        <h1>Account</h1>
+        <p>Manage your settings and data.</p>
+      </div>
+
+      <div class="account-sections">
+
+        <!-- Profile -->
+        <div class="card">
+          <div class="section-label">Profile</div>
+          <div style="display:flex;gap:14px;align-items:center">
+            <div class="user-avatar" style="width:48px;height:48px;font-size:20px" id="acct-avatar">?</div>
+            <div>
+              <p class="bold" id="acct-username">…</p>
+              <p class="text-sm text-muted">Personal account</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Replicate key -->
+        <div class="card">
+          <div class="section-label">Replicate API Key</div>
+          <p class="text-sm text-muted" style="margin-bottom:16px">
+            Stored encrypted, never shared. Get yours at
+            <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a>.
+          </p>
+          <div id="key-current" class="hidden" style="margin-bottom:12px">
+            <span class="key-chip">r8_•••••••••••••••••••••••</span>
+            <span class="badge badge-green" style="margin-left:8px">✓ Saved</span>
+          </div>
+          <div class="form-group">
+            <label id="key-lbl">Add your Replicate API key</label>
+            <div style="display:flex;gap:8px">
+              <input class="input" id="key-input" type="password" placeholder="r8_…" style="flex:1" />
+              <button class="btn btn-primary" id="key-save-btn" onclick="saveKey()">
+                <span id="key-save-text">Save</span>
+                <span id="key-save-spinner" class="spinner hidden"></span>
+              </button>
+            </div>
+          </div>
+          <div id="key-err" class="hidden mt-sm"></div>
+          <div id="key-ok"  class="hidden mt-sm"></div>
+        </div>
+
+        <!-- Data summary -->
+        <div class="card">
+          <div class="section-label">Stored Data</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="readiness-item">
+              🖼️ Selfie: <span id="acct-selfie" class="text-muted" style="margin-left:6px">checking…</span>
+            </div>
+            <div class="readiness-item">
+              🎥 Reference frames: <span id="acct-frames" class="text-muted" style="margin-left:6px">checking…</span>
+            </div>
+            <div class="readiness-item">
+              📹 Generated videos: <span id="acct-videos" class="text-muted" style="margin-left:6px">checking…</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="card danger-card">
+          <div class="section-label">Danger Zone</div>
+          <p class="text-sm text-muted" style="margin-bottom:16px">
+            Permanently delete your account, selfie, reference frames, and all generated videos. Irreversible.
+          </p>
+          <button class="btn btn-danger btn-sm" onclick="deleteAccount()">🗑 Delete My Account &amp; All Data</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toasts -->
+<div id="toasts"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let token = null, me = null;
+let selfieFile = null;
+let genPoll = null, genPollErrors = 0, extractPoll = null, extractPollErrors = 0, extractJobId = null;
+let loraPoll = null, loraJobId = null;
+let selectedVideoFiles = [], serverHasVideos = false;
+
+// ── API ───────────────────────────────────────────────────────────────────────
+const API = {
+  async req(method, path, body, isForm) {
+    const h = {};
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    if (!isForm && body) h['Content-Type'] = 'application/json';
+    const r = await fetch(path, { method, headers: h,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined });
+    if (!r.ok) {
+      let msg = `Error ${r.status}`;
+      try { const j = await r.json(); msg = j.detail || msg; } catch {}
+      throw new Error(msg);
+    }
+    return r.json();
+  },
+  get:      p     => API.req('GET',    p),
+  post:     (p,b) => API.req('POST',   p, b),
+  put:      (p,b) => API.req('PUT',    p, b),
+  del:      p     => API.req('DELETE', p),
+  form:     (p,f) => API.req('POST',   p, f, true),
+  blob: async url => {
+    const h = {};
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    const r = await fetch(url, { headers: h });
+    if (!r.ok) { let m=`Error ${r.status}`; try{const j=await r.json();m=j.detail||m;}catch{} throw new Error(m); }
+    return URL.createObjectURL(await r.blob());
+  },
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type='info', ms=4000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), ms);
+}
+
+// ── Auth tab ──────────────────────────────────────────────────────────────────
+function authTab(t) {
+  document.getElementById('auth-login').classList.toggle('hidden', t!=='login');
+  document.getElementById('auth-register').classList.toggle('hidden', t!=='register');
+  document.querySelectorAll('.tabs .tab').forEach((b,i) =>
+    b.classList.toggle('active', (i===0&&t==='login')||(i===1&&t==='register')));
+}
+
+async function doLogin() {
+  const u = $('login-username').value.trim(), p = $('login-password').value;
+  clearErr('login-err');
+  if (!u || !p) { showErr('login-err','Enter username and password.'); return; }
+  setBusy('login', true);
+  try { loginOk(await API.post('/auth/login', {username:u, password:p})); }
+  catch(e) { showErr('login-err', e.message); }
+  finally { setBusy('login', false); }
+}
+
+async function doRegister() {
+  const u = $('reg-username').value.trim();
+  const e = $('reg-email').value.trim();
+  const p = $('reg-password').value;
+  clearErr('reg-err');
+  if (!u || !e || !p) { showErr('reg-err','Fill in all fields.'); return; }
+  setBusy('reg', true);
+  try { loginOk(await API.post('/auth/register', {username:u, email:e, password:p})); }
+  catch(err) { showErr('reg-err', err.message); }
+  finally { setBusy('reg', false); }
+}
+
+function showForgot() {
+  ['auth-login','auth-register','auth-reset'].forEach(id => $(id).classList.add('hidden'));
+  $('auth-forgot').classList.remove('hidden');
+  document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
+}
+function hideForgot() {
+  $('auth-forgot').classList.add('hidden');
+  $('auth-login').classList.remove('hidden');
+}
+
+async function doForgot() {
+  const email = $('forgot-email').value.trim();
+  clearErr('forgot-msg');
+  if (!email) { $('forgot-msg').innerHTML='<span style="color:var(--danger)">Enter your email.</span>'; $('forgot-msg').classList.remove('hidden'); return; }
+  setBusy('forgot', true);
+  try {
+    const d = await API.post('/auth/forgot-password', { email });
+    $('forgot-msg').innerHTML = `<span style="color:var(--success)">${esc(d.message)}</span>`;
+    $('forgot-msg').classList.remove('hidden');
+  } catch(err) {
+    $('forgot-msg').innerHTML = `<span style="color:var(--danger)">${esc(err.message)}</span>`;
+    $('forgot-msg').classList.remove('hidden');
+  } finally { setBusy('forgot', false); }
+}
+
+async function doReset() {
+  const pw = $('reset-password').value;
+  const token = new URLSearchParams(window.location.search).get('reset');
+  clearErr('reset-err');
+  if (!pw) { showErr('reset-err','Enter a new password.'); return; }
+  setBusy('reset', true);
+  try {
+    await API.post('/auth/reset-password', { token, new_password: pw });
+    // Clean URL, then show login with success toast
+    window.history.replaceState({}, '', '/');
+    ['auth-reset'].forEach(id => $(id).classList.add('hidden'));
+    $('auth-login').classList.remove('hidden');
+    document.querySelectorAll('.tabs .tab')[0].classList.add('active');
+    toast('Password updated — sign in with your new password.', 'success', 6000);
+  } catch(err) { showErr('reset-err', err.message); }
+  finally { setBusy('reset', false); }
+}
+
+function loginOk(d) {
+  token = d.access_token;
+  me = {user_id: d.user_id, username: d.username};
+  localStorage.setItem('sv_tok', token);
+  localStorage.setItem('sv_me',  JSON.stringify(me));
+  showApp();
+}
+
+function logout() {
+  token = null; me = null;
+  localStorage.removeItem('sv_tok');
+  localStorage.removeItem('sv_me');
+  clearInterval(genPoll); clearInterval(extractPoll); clearInterval(loraPoll);
+  $('page-auth').classList.remove('hidden');
+  $('page-app').classList.add('hidden');
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function showApp() {
+  $('page-auth').classList.add('hidden');
+  $('page-app').classList.remove('hidden');
+  setSidebarUser();
+  goto('setup');
+  refreshReadiness();
+  checkServerVideos();
+}
+
+function setSidebarUser() {
+  if (!me) return;
+  const ini = me.username[0].toUpperCase();
+  $('sb-avatar').textContent = ini;
+  $('sb-username').textContent = me.username;
+  $('acct-avatar').textContent = ini;
+  $('acct-username').textContent = me.username;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const PAGES = ['setup','generate','history','account'];
+
+function goto(pg) {
+  PAGES.forEach(p => {
+    $(`pg-${p}`).classList.toggle('hidden', p!==pg);
+    const s = $(`snav-${p}`), m = $(`mnav-${p}`);
+    if(s) s.classList.toggle('active', p===pg);
+    if(m) m.classList.toggle('active', p===pg);
+  });
+  if (pg==='history')  loadHistory();
+  if (pg==='account')  loadAccount();
+  if (pg==='setup')  { refreshReadiness(); refreshLoraStatus(); checkServerVideos(); }
+  if (pg==='generate') refreshModePill();
+}
+
+// ── Readiness ─────────────────────────────────────────────────────────────────
+async function refreshReadiness() {
+  try {
+    const [prof, authMe] = await Promise.all([API.get('/api/v1/me'), API.get('/auth/me')]);
+    $('r-selfie').textContent  = prof.has_selfie          ? '✅' : '⬜';
+    $('r-key').textContent     = authMe.has_replicate_key ? '✅' : '⬜';
+    $('r-frames').textContent  = prof.reference_frames > 0 ? '✅' : '⬜';
+    const ready = prof.has_selfie && authMe.has_replicate_key;
+    $('ready-cta').classList.toggle('hidden', !ready);
+
+    if (prof.reference_frames > 0) {
+      $('frames-badge-wrap').innerHTML =
+        `<span class="badge badge-green">✓ ${prof.reference_frames} frames extracted</span>`;
+      $('frames-badge-wrap').classList.remove('hidden');
+    }
+    if (prof.has_selfie) {
+      $('selfie-hint').classList.add('hidden');
+      $('selfie-preview').classList.remove('hidden');
+    }
+  } catch {}
+}
+
+async function refreshModePill() {
+  try {
+    const [p, lora] = await Promise.all([
+      API.get('/api/v1/me'),
+      API.get('/api/v1/training/lora').catch(() => ({})),
+    ]);
+    const pill = $('gen-mode-pill');
+    if (lora.trained) {
+      $('gen-mode-txt').textContent = 'LoRA mode (trained likeness — best quality)';
+      pill.classList.remove('hidden');
+    } else if (p.reference_frames > 0) {
+      $('gen-mode-txt').textContent = 'Reference mode (video frames)';
+      pill.classList.remove('hidden');
+    } else if (p.has_selfie) {
+      $('gen-mode-txt').textContent = 'Selfie mode';
+      pill.classList.remove('hidden');
+    } else {
+      pill.classList.add('hidden');
+    }
+  } catch {}
+}
+
+// ── Selfie ────────────────────────────────────────────────────────────────────
+function onSelfieFile(inp) {
+  if (!inp.files[0]) return;
+  selfieFile = inp.files[0];
+  const r = new FileReader();
+  r.onload = e => {
+    $('selfie-preview').src = e.target.result;
+    $('selfie-preview').classList.remove('hidden');
+    $('selfie-hint').classList.add('hidden');
+  };
+  r.readAsDataURL(selfieFile);
+  $('selfie-btn').disabled = false;
+}
+
+async function uploadSelfie() {
+  if (!selfieFile) return;
+  const st = $('selfie-status');
+  setBusy('selfie', true);
+  st.className = 'hidden';
+  const fd = new FormData();
+  fd.append('selfie', selfieFile);
+  try {
+    await API.form('/api/v1/pipeline/selfie', fd);
+    st.innerHTML = '<span class="badge badge-green">✓ Face detected — selfie saved</span>';
+    st.className = 'mt-sm';
+    toast('Selfie saved!', 'success');
+    refreshReadiness();
+  } catch(e) {
+    st.innerHTML = `<span class="badge badge-red">✕ ${esc(e.message)}</span>`;
+    st.className = 'mt-sm';
+  } finally { setBusy('selfie', false); }
+}
+
+// ── Video file upload ─────────────────────────────────────────────────────────
+const _MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+function onVideoFiles(input) {
+  const files = Array.from(input.files);
+  const valid = [];
+  for (const f of files) {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext) && !f.type.startsWith('video/')) {
+      toast(`${f.name}: unsupported format — use MP4 or MOV`, 'error'); continue;
+    }
+    if (f.size > _MAX_VIDEO_BYTES) {
+      toast(`${f.name}: ${(f.size/1e6).toFixed(0)} MB exceeds the 100 MB limit`, 'error'); continue;
+    }
+    valid.push(f);
+  }
+  if (valid.length > 5) { toast('Max 5 files — keeping the first 5', 'warn'); valid.splice(5); }
+  selectedVideoFiles = valid;
+  _renderVideoList();
+  input.value = '';
+}
+
+function _renderVideoList() {
+  const el = $('video-file-list');
+  if (!selectedVideoFiles.length) { el.classList.add('hidden'); return; }
+  el.innerHTML = selectedVideoFiles.map(f =>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px">
+       <span>${esc(f.name)}</span>
+       <span class="text-muted">${(f.size/1e6).toFixed(1)} MB</span>
+     </div>`
+  ).join('');
+  el.classList.remove('hidden');
+}
+
+async function _uploadVideosToServer() {
+  const fd = new FormData();
+  for (const f of selectedVideoFiles) fd.append('videos', f);
+  const r = await fetch('/api/v1/training/upload-videos', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${localStorage.getItem('sv_tok')}` },
+    body: fd,
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: 'Upload failed' }));
+    throw new Error(err.detail || 'Upload failed');
+  }
+  serverHasVideos = true;
+  return r.json();
+}
+
+async function checkServerVideos() {
+  try {
+    const d = await API.get('/api/v1/training/videos');
+    serverHasVideos = d.has_videos;
+    const badge = $('video-server-badge');
+    if (d.has_videos) {
+      badge.innerHTML = `<span class="badge badge-green">✓ ${d.count} video(s) ready on server (${d.total_mb} MB)</span>`;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch {}
+}
+
+async function startExtract() {
+  if (!selectedVideoFiles.length && !serverHasVideos) {
+    toast('Choose at least one video first', 'error'); return;
+  }
+  setBusy('extract', true);
+  $('extract-status').className = 'hidden';
+  $('extract-progress').classList.remove('hidden');
+  try {
+    if (selectedVideoFiles.length) {
+      $('extract-stage').textContent = 'Uploading videos…';
+      $('extract-bar').style.width = '10%';
+      await _uploadVideosToServer();
+    }
+    $('extract-stage').textContent = 'Queuing extraction…';
+    $('extract-bar').style.width = '20%';
+    const d = await API.post('/api/v1/training/start', {});
+    extractJobId = d.job_id;
+    $('extract-status').innerHTML = '<span class="badge badge-yellow"><span class="dot"></span> Extracting…</span>';
+    $('extract-status').className = 'mt-sm';
+    pollExtract();
+  } catch(e) {
+    $('extract-progress').classList.add('hidden');
+    $('extract-status').innerHTML = `<span class="badge badge-red">✕ ${esc(e.message)}</span>`;
+    $('extract-status').className = 'mt-sm';
+    setBusy('extract', false);
+  }
+}
+
+function pollExtract() {
+  clearInterval(extractPoll);
+  extractPollErrors = 0;
+  extractPoll = setInterval(async () => {
+    try {
+      const d = await API.get(`/api/v1/training/status/${extractJobId}`);
+      extractPollErrors = 0;
+      $('extract-stage').textContent = d.stage || 'Processing…';
+      $('extract-bar').style.width = `${d.progress_pct||0}%`;
+      if (d.status === 'completed') {
+        clearInterval(extractPoll);
+        setBusy('extract', false);
+        $('extract-status').innerHTML =
+          `<span class="badge badge-green">✓ ${d.frame_count} frames extracted</span>`;
+        toast(`${d.frame_count} face frames extracted!`, 'success');
+        refreshReadiness();
+      } else if (d.status === 'failed') {
+        clearInterval(extractPoll);
+        setBusy('extract', false);
+        $('extract-status').innerHTML =
+          `<span class="badge badge-red">✕ ${esc(d.error || 'Extraction failed')}</span>`;
+        toast(d.error || 'Extraction failed', 'error');
+      }
+    } catch(e) {
+      extractPollErrors++;
+      if (extractPollErrors >= 3) {
+        clearInterval(extractPoll);
+        setBusy('extract', false);
+        $('extract-status').innerHTML =
+          `<span class="badge badge-red">✕ Connection lost — refresh and check status</span>`;
+        $('extract-status').className = 'mt-sm';
+      }
+    }
+  }, 4000);
+}
+
+async function clearFrames() {
+  if (!confirm('Clear extracted frames and uploaded videos?')) return;
+  try {
+    const d = await API.del('/api/v1/training/frames');
+    await API.del('/api/v1/training/videos').catch(() => {});
+    selectedVideoFiles = [];
+    serverHasVideos = false;
+    _renderVideoList();
+    $('video-server-badge').classList.add('hidden');
+    $('frames-badge-wrap').classList.add('hidden');
+    $('extract-status').className = 'hidden';
+    toast(`Cleared ${d.deleted} reference frames.`, 'info');
+    refreshReadiness();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── LoRA Training ─────────────────────────────────────────────────────────────
+async function refreshLoraStatus() {
+  try {
+    const d = await API.get('/api/v1/training/lora');
+    const trained = d.trained;
+    $('lora-trained-banner').classList.toggle('hidden', !trained);
+    $('lora-clear-btn').style.display = d.status ? 'inline-flex' : 'none';
+    $('r-lora').textContent = trained ? '✅' : '⬜';
+    if (d.status === 'running' || d.status === 'pending') {
+      $('lora-status-area').classList.remove('hidden');
+      $('lora-stage').textContent = 'Training in progress…';
+      $('lora-bar').style.width = '60%';
+      // Resume polling if user refreshed the page mid-training
+      if (d.job_id && !loraPoll) {
+        loraJobId = d.job_id;
+        setBusy('lora', true);
+        pollLora();
+      }
+    }
+    if (d.status === 'failed') {
+      showLoraError(d.error || 'Training failed. You can reset and try again.');
+    }
+  } catch {}
+}
+
+async function startLoraTraining() {
+  if (!selectedVideoFiles.length && !serverHasVideos) {
+    toast('Upload videos in the "Boost Quality" section first', 'error'); return;
+  }
+  if (!confirm(`Start LoRA training?\n\nOne-time cost: ~$5–10 (billed to your Replicate account)\nFirst training: ~10–15 min\n\nUploaded videos are permanently deleted once training is submitted.\n\nAfter this, each video generates in ~3–5 min with your face locked in.\n\nContinue?`)) return;
+
+  setBusy('lora', true);
+  $('lora-error-area').classList.add('hidden');
+  $('lora-status-area').classList.remove('hidden');
+  try {
+    if (selectedVideoFiles.length) {
+      $('lora-stage').textContent = 'Uploading videos…';
+      $('lora-bar').style.width = '5%';
+      await _uploadVideosToServer();
+    }
+    $('lora-stage').textContent = 'Queuing training job…';
+    $('lora-bar').style.width = '10%';
+    const d = await API.post('/api/v1/training/lora/start', {});
+    loraJobId = d.job_id;
+    pollLora();
+  } catch(e) {
+    $('lora-status-area').classList.add('hidden');
+    showLoraError(e.message);
+    setBusy('lora', false);
+  }
+}
+
+function showLoraError(msg) {
+  const isLong = msg && msg.length > 80;
+  $('lora-error-area').innerHTML = isLong
+    ? `<div class="alert alert-error">${esc(msg)}</div>`
+    : `<span class="badge badge-red">✕ ${esc(msg)}</span>`;
+  $('lora-error-area').classList.remove('hidden');
+}
+
+function pollLora() {
+  clearInterval(loraPoll);
+  loraPoll = setInterval(async () => {
+    try {
+      const d = await API.get(`/api/v1/training/lora/status/${loraJobId}`);
+      $('lora-bar').style.width = (d.progress_pct || 5) + '%';
+      $('lora-stage').textContent = d.stage || 'Training…';
+      if (d.status === 'completed') {
+        clearInterval(loraPoll);
+        setBusy('lora', false);
+        $('lora-status-area').classList.add('hidden');
+        toast('Likeness model trained! Future videos will generate in ~3–5 min with your face locked in.', 'success', 8000);
+        refreshLoraStatus();
+        refreshReadiness();
+      } else if (d.status === 'failed') {
+        clearInterval(loraPoll);
+        setBusy('lora', false);
+        $('lora-status-area').classList.add('hidden');
+        showLoraError(d.error || 'Training failed');
+      }
+    } catch(e) {
+      clearInterval(loraPoll);
+      setBusy('lora', false);
+      $('lora-status-area').classList.add('hidden');
+      showLoraError(e.message);
+    }
+  }, 15000);
+}
+
+async function clearLora() {
+  if (!confirm('Reset LoRA training? This only clears the reference in our system — the model stays in your Replicate account.')) return;
+  try {
+    await API.del('/api/v1/training/lora');
+    toast('LoRA state cleared.', 'info');
+    refreshLoraStatus();
+    refreshReadiness();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+function updateDurLabel() {
+  const c = parseInt($('gen-clips').value);
+  $('dur-lbl').textContent = `(~${c*5}s total)`;
+}
+
+async function generate() {
+  const prompt = $('gen-prompt').value.trim();
+  clearErr('gen-err');
+  if (!prompt) { showErr('gen-err','Enter a prompt.'); return; }
+  setBusy('gen', true);
+  $('gen-progress').classList.remove('hidden');
+  $('gen-result').classList.add('hidden');
+  $('gen-bar').style.width = '5%';
+  $('gen-stage-txt').textContent = 'Queuing…';
+  try {
+    const d = await API.post('/api/v1/pipeline/generate', {
+      prompt,
+      num_clips:  parseInt($('gen-clips').value),
+      resolution: $('gen-res').value,
+    });
+    $('gen-eta').textContent = `~${d.estimated_minutes} min for ${d.video_duration_sec}s video`;
+    pollGen(d.job_id);
+  } catch(e) {
+    showErr('gen-err', e.message);
+    $('gen-progress').classList.add('hidden');
+    setBusy('gen', false);
+  }
+}
+
+function pollGen(jobId) {
+  clearInterval(genPoll);
+  genPollErrors = 0;
+  genPoll = setInterval(async () => {
+    try {
+      const d = await API.get(`/api/v1/pipeline/jobs/${jobId}`);
+      genPollErrors = 0;
+      $('gen-bar').style.width = `${d.progress_pct||0}%`;
+      $('gen-stage-txt').textContent = d.message || `${d.progress_pct||0}%`;
+      if (d.status === 'completed' && d.video_url) {
+        clearInterval(genPoll);
+        setBusy('gen', false);
+        $('gen-progress').classList.add('hidden');
+        showResult(d.video_url);
+        toast('Video ready!', 'success');
+      } else if (d.status === 'failed') {
+        clearInterval(genPoll);
+        setBusy('gen', false);
+        $('gen-progress').classList.add('hidden');
+        showErr('gen-err', d.error || 'Generation failed.');
+      }
+    } catch(e) {
+      genPollErrors++;
+      if (genPollErrors >= 3) {
+        clearInterval(genPoll);
+        setBusy('gen', false);
+        $('gen-progress').classList.add('hidden');
+        showErr('gen-err', 'Connection lost. Refresh the page to check your video status.');
+      }
+    }
+  }, 5000);
+}
+
+async function showResult(url) {
+  $('gen-result').classList.remove('hidden');
+  try {
+    const blobUrl = await API.blob(url);
+    $('gen-video').src = blobUrl;
+    $('gen-dl').href = blobUrl;
+    $('gen-dl').download = url.split('/').pop();
+  } catch(e) { toast('Could not load video: ' + e.message, 'error'); }
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  $('hist-loading').style.display = 'flex';
+  $('hist-empty').classList.add('hidden');
+  $('hist-grid').classList.add('hidden');
+  $('hist-grid').innerHTML = '';
+  try {
+    const d = await API.get('/api/v1/pipeline/history');
+    $('hist-loading').style.display = 'none';
+    if (!d.jobs || !d.jobs.length) { $('hist-empty').classList.remove('hidden'); return; }
+    $('hist-grid').classList.remove('hidden');
+    d.jobs.forEach(j => $('hist-grid').appendChild(histCard(j)));
+  } catch(e) {
+    $('hist-loading').style.display = 'none';
+    toast(e.message, 'error');
+  }
+}
+
+function histCard(j) {
+  const div = document.createElement('div');
+  div.className = 'history-card';
+  const badges = {
+    completed: `<span class="badge badge-green"><span class="dot"></span> Completed</span>`,
+    running:   `<span class="badge badge-yellow"><span class="dot"></span> Running</span>`,
+    pending:   `<span class="badge badge-gray"><span class="dot"></span> Pending</span>`,
+    failed:    `<span class="badge badge-red"><span class="dot"></span> Failed</span>`,
+  };
+  const date = j.created_at ? new Date(j.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+  const vidId = `hv-${j.job_id}`, dlId = `hd-${j.job_id}`;
+  const vid  = j.video_url
+    ? `<div class="history-video"><video id="${vidId}" preload="metadata" controls></video></div>` : '';
+  const acts = j.video_url
+    ? `<a id="${dlId}" class="btn btn-primary btn-sm" href="#">⬇ Download</a>` : '';
+  const errTxt = j.error && j.status === 'failed'
+    ? `<span class="text-sm text-muted">${esc(j.error)}</span>` : '';
+  div.innerHTML = `
+    ${vid}
+    <div class="history-card-body">
+      <div class="history-top">
+        <div class="history-prompt">${esc(j.prompt)}</div>
+        ${badges[j.status]||''}
+      </div>
+      <div class="history-meta">
+        <span>${j.resolution||''}</span>
+        <span>${j.num_clips ? j.num_clips+' clips' : ''}</span>
+        <span>${date}</span>
+      </div>
+    </div>
+    ${(acts||errTxt) ? `<div class="history-actions">${acts}${errTxt}</div>` : ''}
+  `;
+  if (j.video_url) {
+    API.blob(j.video_url).then(blobUrl => {
+      const ve = document.getElementById(vidId);
+      const de = document.getElementById(dlId);
+      if (ve) ve.src = blobUrl;
+      if (de) { de.href = blobUrl; de.download = j.video_url.split('/').pop(); }
+    }).catch(() => {});
+  }
+  return div;
+}
+
+// ── Account ───────────────────────────────────────────────────────────────────
+async function loadAccount() {
+  try {
+    const [p, m] = await Promise.all([API.get('/api/v1/me'), API.get('/auth/me')]);
+    $('acct-selfie').textContent  = p.has_selfie ? 'Uploaded' : 'Not uploaded';
+    $('acct-frames').textContent  = p.reference_frames > 0 ? `${p.reference_frames} frames` : 'None';
+    $('acct-videos').textContent  = p.generated_videos > 0 ? `${p.generated_videos} videos` : 'None';
+    if (m.has_replicate_key) {
+      $('key-current').classList.remove('hidden');
+      $('key-lbl').textContent = 'Update Replicate API key';
+    }
+  } catch {}
+}
+
+async function saveKey() {
+  const k = $('key-input').value.trim();
+  clearErr('key-err'); $('key-ok').className = 'hidden';
+  if (!k) { showErr('key-err','Enter your Replicate API key.'); return; }
+  setBusy('key-save', true);
+  try {
+    await API.put('/auth/replicate-key', {replicate_key: k});
+    $('key-input').value = '';
+    $('key-current').classList.remove('hidden');
+    $('key-lbl').textContent = 'Update Replicate API key';
+    $('key-ok').innerHTML = '<div class="alert alert-success">✓ Key saved and verified.</div>';
+    $('key-ok').className = '';
+    toast('Replicate key saved!', 'success');
+    refreshReadiness();
+  } catch(e) { showErr('key-err', e.message); }
+  finally { setBusy('key-save', false); }
+}
+
+async function deleteAccount() {
+  if (!confirm('Delete your account and ALL data? This cannot be undone.')) return;
+  if (!confirm('Last chance — are you sure?')) return;
+  try { await API.del('/api/v1/me'); toast('Account deleted.'); logout(); }
+  catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function setBusy(id, on) {
+  const t = $(`${id}-btn-text`) || $(`${id}-text`);
+  const s = $(`${id}-spinner`);
+  const b = $(`${id}-btn`) || $(`${id}-save-btn`) || $(`${id}-upload-btn`);
+  if(t) t.classList.toggle('hidden', on);
+  if(s) s.classList.toggle('hidden', !on);
+  if(b) b.disabled = on;
+}
+function showErr(id, msg) {
+  $(id).innerHTML = `<div class="alert alert-error">${esc(msg)}</div>`;
+  $(id).className = '';
+}
+function clearErr(id) { $(id).className = 'hidden'; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function() {
+  // Password-reset link: /?reset=TOKEN
+  const resetToken = new URLSearchParams(window.location.search).get('reset');
+  if (resetToken) {
+    ['auth-login','auth-register','auth-forgot'].forEach(id => $(id).classList.add('hidden'));
+    $('auth-reset').classList.remove('hidden');
+    return;
+  }
+
+  const t = localStorage.getItem('sv_tok');
+  const u = localStorage.getItem('sv_me');
+  if (t && u) {
+    token = t; me = JSON.parse(u);
+    API.get('/auth/me').then(d => {
+      me = {...me, has_replicate_key: d.has_replicate_key};
+      showApp();
+    }).catch(() => {
+      localStorage.removeItem('sv_tok');
+      localStorage.removeItem('sv_me');
+    });
+  }
+})();
+</script>
+</body>
+</html>

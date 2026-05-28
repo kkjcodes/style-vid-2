@@ -1,0 +1,81 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ${{ secrets.AZURE_REGISTRY }}          # e.g. stylevid.azurecr.io
+  IMAGE: stylevid
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: |
+          PYTHONPATH=. python -c "
+          from backend.core.config import get_settings
+          from backend.services import replicate_service, face_swap_service, video_chain_service
+          from backend.api.main import app
+          print('Import smoke test: OK')
+          "
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy API container app
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp update \
+              --name stylevid-api \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Deploy Worker container app
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az containerapp update \
+              --name stylevid-worker \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ github.sha }}
