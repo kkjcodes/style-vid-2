@@ -230,3 +230,68 @@ def test_history_empty(client, auth):
 def test_history_requires_auth(client):
     r = client.get("/api/v1/pipeline/history")
     assert r.status_code == 403
+
+
+# ── DELETE /api/v1/pipeline/history/{job_id} ───────────────────────────────
+
+def test_delete_history_item(client, auth_with_key, tmp_path):
+    selfie = tmp_path / "selfie.jpg"
+    selfie.write_bytes(b"x")
+
+    with patch("backend.api.routes.pipeline.storage_service.selfie_path", return_value=selfie), \
+         patch("backend.workers.pipeline_worker.run_pipeline") as mock_run:
+        mock_run.apply_async.return_value = MagicMock()
+        start = client.post(
+            "/api/v1/pipeline/generate",
+            json={"prompt": "delete me", "num_clips": 1, "resolution": "720p"},
+            headers=auth_with_key["headers"],
+        )
+    assert start.status_code == 200
+    job_id = start.json()["job_id"]
+
+    with patch("backend.api.routes.pipeline.storage_service.delete_generated_video", return_value=True):
+        r = client.delete(f"/api/v1/pipeline/history/{job_id}", headers=auth_with_key["headers"])
+
+    assert r.status_code == 200
+    assert r.json()["deleted"] is True
+    history = client.get("/api/v1/pipeline/history", headers=auth_with_key["headers"])
+    assert history.status_code == 200
+    assert all(j["job_id"] != job_id for j in history.json().get("jobs", []))
+
+
+def test_delete_history_item_requires_owner(client, auth, tmp_path):
+    # Create another user that owns the job.
+    suffix = uuid.uuid4().hex[:8]
+    r = client.post(
+        "/auth/register",
+        json={
+            "username": f"owner_{suffix}",
+            "password": "Pass1234",
+            "email": f"owner_{suffix}@example.com",
+        },
+    )
+    owner = r.json()
+    owner_id = owner["user_id"]
+
+    with patch("backend.services.replicate_service.test_connection", return_value=True):
+        client.put(
+            "/auth/replicate-key",
+            json={"replicate_key": "r8_ownerkey"},
+            headers={"Authorization": f"Bearer {owner['access_token']}"},
+        )
+
+    selfie = tmp_path / "owner_selfie.jpg"
+    selfie.write_bytes(b"x")
+    with patch("backend.api.routes.pipeline.storage_service.selfie_path", return_value=selfie), \
+         patch("backend.workers.pipeline_worker.run_pipeline") as mock_run:
+        mock_run.apply_async.return_value = MagicMock()
+        start = client.post(
+            "/api/v1/pipeline/generate",
+            json={"prompt": "owner prompt", "num_clips": 1, "resolution": "720p"},
+            headers={"Authorization": f"Bearer {owner['access_token']}"},
+        )
+    assert start.status_code == 200
+    job_id = start.json()["job_id"]
+
+    r = client.delete(f"/api/v1/pipeline/history/{job_id}", headers=auth["headers"])
+    assert r.status_code == 403

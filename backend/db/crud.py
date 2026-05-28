@@ -160,6 +160,17 @@ def get_job_by_id(db: Session, job_id: str) -> VideoJob | None:
     return db.query(VideoJob).filter(VideoJob.id == job_id).first()
 
 
+def delete_video_job(db: Session, job_id: str, user_id: str) -> int:
+    """Delete one video job owned by the given user. Returns number of deleted rows."""
+    deleted = (
+        db.query(VideoJob)
+        .filter(VideoJob.id == job_id, VideoJob.user_id == user_id)
+        .delete()
+    )
+    db.commit()
+    return deleted
+
+
 def get_user_video_jobs(db: Session, user_id: str) -> list[VideoJob]:
     return (
         db.query(VideoJob)

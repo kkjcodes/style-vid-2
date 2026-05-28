@@ -242,6 +242,18 @@
     .gen-result video { width: 100%; display: block; max-height: 480px; background: #000; }
     .gen-result-actions { padding: 12px 16px; display: flex; gap: 8px; background: var(--card); }
 
+    .prompt-examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .prompt-chip {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .prompt-chip:hover { border-color: var(--accent); color: var(--accent); }
+
     .mode-pill {
       display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px;
       border-radius: 99px; font-size: 13px; font-weight: 600;
@@ -265,6 +277,7 @@
       padding: 12px 16px; border-top: 1px solid var(--border);
       display: flex; gap: 8px; background: var(--surface); align-items: center;
     }
+    .history-actions .spacer { flex: 1; }
     .history-video { background: #000; }
     .history-video video { width: 100%; max-height: 200px; display: block; }
     .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
@@ -628,6 +641,7 @@
             <label>Prompt — describe the scene</label>
             <textarea class="input" id="gen-prompt" rows="3"
               placeholder="Walking through Central Park in autumn, camera slowly zooming out, cinematic 4K…"></textarea>
+            <div class="prompt-examples" id="prompt-samples"></div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1297,6 +1311,29 @@ async function generate() {
   }
 }
 
+const SAMPLE_PROMPTS = [
+  'Walking on a rainy neon street at night, cinematic lighting, slow dolly-in.',
+  'Standing on a mountain overlook at golden hour, wind in hair, dramatic wide shot.',
+  'Modern office interview shot, soft window light, subtle camera movement.',
+  'Jogging on a beach at sunrise, warm colors, handheld documentary feel.',
+  'Luxury rooftop party scene, city skyline bokeh, stylish fashion editorial vibe.'
+];
+
+function renderSamplePrompts() {
+  const wrap = $('prompt-samples');
+  if (!wrap) return;
+  wrap.innerHTML = SAMPLE_PROMPTS.map((p, idx) =>
+    `<button type="button" class="prompt-chip" onclick="useSamplePrompt(${idx})">${esc(p)}</button>`
+  ).join('');
+}
+
+function useSamplePrompt(idx) {
+  const prompt = SAMPLE_PROMPTS[idx];
+  if (!prompt) return;
+  $('gen-prompt').value = prompt;
+  $('gen-prompt').focus();
+}
+
 function pollGen(jobId) {
   clearInterval(genPoll);
   genPollErrors = 0;
@@ -1373,6 +1410,7 @@ function histCard(j) {
     ? `<div class="history-video"><video id="${vidId}" preload="metadata" controls></video></div>` : '';
   const acts = j.video_url
     ? `<a id="${dlId}" class="btn btn-primary btn-sm" href="#">⬇ Download</a>` : '';
+  const delBtn = `<button class="btn btn-danger btn-sm" onclick="deleteHistoryVideo('${j.job_id}')">🗑 Delete</button>`;
   const errTxt = j.error && j.status === 'failed'
     ? `<span class="text-sm text-muted">${esc(j.error)}</span>` : '';
   div.innerHTML = `
@@ -1388,7 +1426,7 @@ function histCard(j) {
         <span>${date}</span>
       </div>
     </div>
-    ${(acts||errTxt) ? `<div class="history-actions">${acts}${errTxt}</div>` : ''}
+    ${(acts||errTxt||delBtn) ? `<div class="history-actions">${acts}<span class="spacer"></span>${errTxt}${delBtn}</div>` : ''}
   `;
   if (j.video_url) {
     API.blob(j.video_url).then(blobUrl => {
@@ -1399,6 +1437,20 @@ function histCard(j) {
     }).catch(() => {});
   }
   return div;
+}
+
+async function deleteHistoryVideo(jobId) {
+  if (!confirm('Delete this video from your history? This cannot be undone.')) return;
+  try {
+    await API.del(`/api/v1/pipeline/history/${jobId}`);
+    toast('Video deleted.', 'success');
+    loadHistory();
+    if ($('pg-account') && !$('pg-account').classList.contains('hidden')) {
+      loadAccount();
+    }
+  } catch (e) {
+    toast(e.message, 'error');
+  }
 }
 
 // ── Account ───────────────────────────────────────────────────────────────────
@@ -1460,6 +1512,7 @@ function clearErr(id) { $(id).className = 'hidden'; }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (function() {
+  renderSamplePrompts();
   // Password-reset link: /?reset=TOKEN
   const resetToken = new URLSearchParams(window.location.search).get('reset');
   if (resetToken) {

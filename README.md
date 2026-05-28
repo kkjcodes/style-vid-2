@@ -7,7 +7,7 @@ Production website/API: https://stylevid-api.nicesand-10f28641.eastus.azureconta
 You can:
 
 - Upload a selfie
-- Optionally add YouTube links to improve likeness quality
+- Upload training videos to improve likeness quality
 - Train a one-time likeness model (optional)
 - Generate and download videos
 
@@ -18,7 +18,7 @@ You can:
 1. Create an account and log in.
 2. Open Account settings and paste your Replicate API key.
 3. Upload a clear selfie (single face, good lighting).
-4. Optional: add YouTube links and run LoRA training for better identity consistency.
+4. Optional: upload training videos and run LoRA training for better identity consistency.
 5. Enter a prompt and generate.
 6. Track progress in History and download when complete.
 
@@ -30,7 +30,7 @@ You need:
 
 - A Replicate account and API key (starts with `r8_`)
 - A clear selfie photo (single face, good lighting)
-- Optional YouTube videos where your face is visible
+- Optional training videos where your face is visible
 
 ### Important billing note
 
@@ -42,7 +42,7 @@ StyleVid itself does not charge you. Training and generation costs are billed di
 2. Sign up and log in
 3. Add your Replicate API key in Account
 4. Upload your selfie
-5. Optional: add YouTube links and run training
+5. Optional: upload training videos and run training
 6. Enter a prompt and click Generate
 7. Download from History
 
@@ -50,13 +50,13 @@ StyleVid itself does not charge you. Training and generation costs are billed di
 
 - Use a high-quality selfie with your full face visible
 - Avoid sunglasses, masks, or heavy motion blur
-- For training links, use clips with stable lighting and frequent face visibility
+- For training videos, use clips with stable lighting and frequent face visibility
 - Start with short prompts and simple scenes, then iterate
 
 ### What each mode means
 
 - Selfie mode: fastest path, no training required
-- Reference mode: uses extracted reference frames from your links
+- Training mode: uses frames/clips extracted from your uploaded videos
 - LoRA mode: optional one-time training for best identity consistency
 
 ### Typical timing
@@ -69,7 +69,7 @@ StyleVid itself does not charge you. Training and generation costs are billed di
 
 - "Could not verify key": check that your Replicate key starts with `r8_` and is active
 - "No face detected": upload a clearer selfie with one visible face
-- Training failed: try different links with clearer face coverage
+- Training failed: try different uploaded videos with clearer face coverage
 - Empty/failed generation: retry once, then check job status in History
 
 ## For Developers

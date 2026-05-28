@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 from backend.core.config import get_settings
 
@@ -52,3 +53,23 @@ def delete_user_videos(user_id: str) -> int:
         container.delete_blob(blob.name)
     log.info(f"GDPR: deleted {len(blobs)} blobs for user={user_id}")
     return len(blobs)
+
+
+def delete_video_by_url(video_url: str) -> bool:
+    """Delete one blob video by its full URL. Returns True when deleted."""
+    from azure.storage.blob import BlobServiceClient
+
+    s = get_settings()
+    client = BlobServiceClient.from_connection_string(s.azure_storage_connection_string)
+    container = client.get_container_client(s.azure_storage_container)
+
+    parsed = urlparse(video_url)
+    marker = f"/{s.azure_storage_container}/"
+    if marker not in parsed.path:
+        log.warning(f"Blob delete skipped (unexpected URL format): {video_url}")
+        return False
+
+    blob_name = parsed.path.split(marker, 1)[1]
+    container.delete_blob(blob_name)
+    log.info(f"Deleted blob video: {blob_name}")
+    return True

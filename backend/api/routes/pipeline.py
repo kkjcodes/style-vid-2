@@ -5,6 +5,7 @@ POST /api/v1/pipeline/selfie              upload selfie (JWT required)
 POST /api/v1/pipeline/generate            kick off video generation (JWT required)
 GET  /api/v1/pipeline/jobs/{job_id}       poll job status
 GET  /api/v1/pipeline/history             list current user's past jobs (JWT required)
+DELETE /api/v1/pipeline/history/{job_id}  delete one generated video + DB record (JWT required)
 GET  /api/v1/pipeline/video/{filename}    stream/download a generated video (JWT required)
 POST /api/v1/pipeline/test-key            validate a Replicate key (no auth needed)
 """
@@ -268,6 +269,35 @@ def list_history(
             }
             for j in jobs
         ]
+    }
+
+
+@router.delete("/history/{job_id}")
+def delete_history_item(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete one generated video from storage and remove its DB job row."""
+    job = crud.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    if job.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your job.")
+
+    storage_deleted = storage_service.delete_generated_video(current_user.id, job.video_filename)
+    db_deleted = crud.delete_video_job(db, job_id, current_user.id)
+    if db_deleted == 0:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    log.info(
+        f"Deleted history item: user={current_user.username} job={job_id} "
+        f"storage_deleted={storage_deleted}"
+    )
+    return {
+        "deleted": True,
+        "job_id": job_id,
+        "storage_deleted": storage_deleted,
     }
 
 

@@ -121,3 +121,27 @@ def delete_user_data(user_id: str) -> None:
     if blob_service.is_enabled():
         blob_service.delete_user_videos(user_id)
     log.info(f"GDPR: deleted all data for user={user_id}")
+
+
+def delete_generated_video(user_id: str, video_ref: str | None) -> bool:
+    """Delete one generated video from local storage or blob storage."""
+    if not video_ref:
+        return False
+
+    from backend.services import blob_service
+
+    if video_ref.startswith("https://"):
+        if blob_service.is_enabled():
+            try:
+                return blob_service.delete_video_by_url(video_ref)
+            except Exception as exc:
+                log.warning(f"Failed to delete blob video for user={user_id}: {exc}")
+        return False
+
+    outputs_dir = _root() / "users" / user_id / "outputs"
+    safe_name = Path(video_ref).name
+    p = outputs_dir / safe_name
+    if p.exists() and p.is_file():
+        p.unlink(missing_ok=True)
+        return True
+    return False
